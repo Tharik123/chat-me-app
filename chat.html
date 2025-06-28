@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chat Me - Secret Chat</title>
+  <style>
+    body {
+      margin: 0; padding: 0; font-family: sans-serif; background: #eee;
+    }
+    #loginPage, #chatPage {
+      display: none; padding: 20px;
+    }
+    .container {
+      max-width: 400px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px #999;
+    }
+    input {
+      width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px;
+    }
+    button {
+      width: 100%; padding: 10px; background: #4CAF50; color: #fff; border: none; border-radius: 5px;
+    }
+    #chatBox {
+      height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;
+    }
+    .msg {
+      margin: 5px 0; padding: 5px; background: #dcf8c6; border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loginPage" class="container">
+  <h2>Chat Me Login</h2>
+  <input type="text" id="username" placeholder="Username or Email">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="register()">Register</button>
+  <button onclick="login()">Login</button>
+</div>
+
+<div id="chatPage" class="container">
+  <h2>Viber Chat</h2>
+  <div id="chatBox"></div>
+  <input type="text" id="message" placeholder="Type your secret message">
+  <button onclick="sendMessage()">Send Secret</button>
+  <button onclick="logout()">Logout</button>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+  import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCG7YFgAQYdmvu6KrIqCoQUXP_84A-m2do",
+    authDomain: "chat-me-60d9e.firebaseapp.com",
+    projectId: "chat-me-60d9e",
+    storageBucket: "chat-me-60d9e.appspot.com",
+    messagingSenderId: "781311625670",
+    appId: "1:781311625670:web:b3e62fade359e856124ac7",
+    measurementId: "G-RCFM3ZBT1E",
+    databaseURL: "https://chat-me-60d9e-default-rtdb.firebaseio.com/"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+
+  const loginPage = document.getElementById("loginPage");
+  const chatPage = document.getElementById("chatPage");
+  const chatBox = document.getElementById("chatBox");
+
+  loginPage.style.display = "block";
+
+  function getEmail(usernameInput) {
+    return usernameInput.includes('@') ? usernameInput : usernameInput + "@chatme.com";
+  }
+
+  function register() {
+    const usernameInput = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+    const email = getEmail(usernameInput);
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(() => {
+        alert("Register success! Now login.");
+      })
+      .catch((e) => alert(e.message));
+  }
+
+  function login() {
+    const usernameInput = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+    const email = getEmail(usernameInput);
+    signInWithEmailAndPassword(auth, email, password)
+      .then(() => {
+        loginPage.style.display = "none";
+        chatPage.style.display = "block";
+        listenForMessages();
+      })
+      .catch((e) => alert(e.message));
+  }
+
+  function sendMessage() {
+    const msg = document.getElementById("message").value;
+    const user = auth.currentUser.email.split('@')[0];
+    if (msg.trim() !== "") {
+      push(ref(db, "secretChats"), {
+        user,
+        msg
+      });
+      document.getElementById("message").value = "";
+    }
+  }
+
+  function listenForMessages() {
+    onChildAdded(ref(db, "secretChats"), (data) => {
+      const { user, msg } = data.val();
+      const div = document.createElement("div");
+      div.className = "msg";
+      div.textContent = user + ": " + msg;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+  }
+
+  window.register = register;
+  window.login = login;
+  window.sendMessage = sendMessage;
+  window.logout = function() {
+    signOut(auth).then(() => {
+      chatPage.style.display = "none";
+      chatBox.innerHTML = "";
+      loginPage.style.display = "block";
+    });
+  };
+</script>
+
+</body>
+</html>
